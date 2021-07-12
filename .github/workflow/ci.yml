@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps: 
-     - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
      
-     - name: Hello!
-       run: echo "Hello!! from ${{ github.flow }} triggered by the ${{ github.event_name }} done by ${{ github.actor }}"
+      - name: Hello!
+        run: echo "Hello!! from ${{ github.flow }} triggered by the ${{ github.event_name }} done by ${{ github.actor }}"
