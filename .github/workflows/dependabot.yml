@@ -5,8 +5,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"          # día específico
-      time: "09:00"
+      day: "friday"          # día específico
+      time: "01:29"
       timezone: "America/Argentina/Buenos_Aires"
     open-pull-requests-limit: 5
     labels:
