@@ -17,8 +17,12 @@ Docker en GHCR), con entornos distintos para QA y producción.
 ├── tests/
 │   ├── test_calculator.py
 │   └── test_api.py
-├── .github/workflows/
-│   └── ci-cd.yml            # pipeline único: jobs ci, cd-qa y cd-prod
+├── .github/
+│   ├── workflows/
+│   │   └── ci-cd.yml        # pipeline único: jobs ci, ci-gate, cd-qa y cd-prod
+│   ├── rulesets/
+│   │   └── main-protection.json  # ruleset importable para proteger main
+│   └── dependabot.yml
 ├── Dockerfile
 ├── requirements.txt         # dependencias de runtime (producción)
 ├── requirements-dev.txt     # runtime + test/lint (incluye al anterior con -r)
@@ -28,22 +32,29 @@ Docker en GHCR), con entornos distintos para QA y producción.
 ## Arquitectura del pipeline
 
 El workflow `ci-cd.yml` se dispara con `push` a `main`, `pull_request` a `main`
-y tags `v*`. Está compuesto por tres jobs: uno de integración (`ci`) y dos de
-entrega (`cd-qa` y `cd-prod`) que dependen del primero y se seleccionan según el
-tipo de tag.
+y tags `v*`. Está compuesto por cuatro jobs: integración (`ci`), un gate
+estable (`ci-gate`) y dos de entrega (`cd-qa` y `cd-prod`) que dependen de la
+integración y se seleccionan según el tipo de tag.
 
 ### Jobs
 
 | Job       | Cuándo corre                                  | Qué hace |
 |-----------|-----------------------------------------------|----------|
 | `ci`      | Siempre (push, PR y tags)                     | Instala dependencias, corre `flake8` y `pytest` sobre una matriz de Python. Actúa como gate: si falla, no se construye nada. |
-| `cd-qa`   | Solo en tags `v*` que contienen `-rc`         | Construye la imagen y la publica en GHCR con el tag del release candidate más el tag móvil `qa`. **No** mueve `latest`. |
-| `cd-prod` | Solo en tags `v*` que **no** contienen `-rc`  | Construye la imagen y la publica en GHCR con el tag de versión y mueve `latest`. |
+| `ci-gate` | Siempre (`needs: ci`)                         | Job con **nombre estable** que resume el resultado de la matriz. Es el _required status check_ del ruleset de `main`, así no se rompe al cambiar la versión de Python. |
+| `cd-qa`   | Solo en tags `v*` que contienen `-rc`         | Construye la imagen y la publica en GHCR con el tag del release candidate más el tag móvil `qa`. **No** mueve `latest`. Corre en el environment `qa`. |
+| `cd-prod` | Solo en tags `v*` que **no** contienen `-rc`  | Construye la imagen y la publica en GHCR con el tag de versión y mueve `latest`. Corre en el environment `production` (apto para exigir aprobación manual). |
 
 ### Decisiones de diseño
 
 - **`needs: ci`** en ambos jobs de CD: ninguna imagen se publica si las pruebas
   o el lint fallan.
+- **`concurrency` con `cancel-in-progress`**: cancela runs obsoletos del mismo
+  ref para dar feedback rápido y no malgastar runners (clave en trunk-based).
+- **`ci-gate` como check requerido**: nombre estable independiente de la matriz,
+  referenciado por el ruleset de `main`.
+- **Environments `qa` y `production`**: aíslan secretos por entorno y permiten
+  configurar _required reviewers_ para aprobar manualmente el deploy a prod.
 - **Separación QA / Prod por convención de tags**: un tag `-rc` va a QA, un tag
   limpio va a producción. Así se practica un flujo de promoción real
   (`v1.2.0-rc1` → validar → `v1.2.0`).
@@ -51,6 +62,17 @@ tipo de tag.
   `latest=false` en `cd-qa`) para que `latest` nunca apunte a un candidato.
 - **Autenticación con `GITHUB_TOKEN`**: usa el token integrado y el permiso
   `packages: write`, sin necesidad de secretos adicionales.
+
+### Protección de `main` (ruleset)
+
+- Pull request obligatorio con al menos 1 aprobación y resolución de hilos.
+- _Required status check_: el job **`CI Gate`** debe pasar antes de fusionar.
+- Historial lineal y solo merge por **squash** (mantiene el trunk limpio).
+- Bloqueo de borrado y de force-push sobre `main`.
+
+> Nota: los _required reviewers_ del environment `production` y el auto-borrado
+> de ramas fusionadas se configuran en la UI de GitHub (no son versionables como
+> archivo del repo).
 
 ## Estrategia de ramas: Trunk-Based Development
 
