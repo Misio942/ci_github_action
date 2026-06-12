@@ -58,9 +58,11 @@ jobs:
         id: meta
         with:
           images: ${{ env.IMAGE }}
+          flavor: |
+            latest=false        # ← desactiva latest automático
           tags: |
             type=ref,event=tag
-            type=raw,value=qa
+            type=raw,value=qa   # solo en cd-qa
 
       - uses: docker/build-push-action@v6
         with:
@@ -90,6 +92,8 @@ jobs:
         id: meta
         with:
           images: ${{ env.IMAGE }}
+          flavor: |
+            latest=true             # ← solo prod controla latest
           tags: |
             type=ref,event=tag
             type=raw,value=latest
