@@ -6,7 +6,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "friday"          # día específico
-      time: "01:29"
+      time: "01:31"
       timezone: "America/Argentina/Buenos_Aires"
     open-pull-requests-limit: 5
     labels:
