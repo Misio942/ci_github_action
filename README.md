@@ -52,6 +52,54 @@ tipo de tag.
 - **Autenticación con `GITHUB_TOKEN`**: usa el token integrado y el permiso
   `packages: write`, sin necesidad de secretos adicionales.
 
+## Estrategia de ramas: Trunk-Based Development
+
+Este pipeline está pensado para **trunk-based development**, el modelo de
+ramificación que mejor encaja con CI/CD. La idea central es que existe **una
+sola rama de larga duración, el _trunk_** (aquí `main`), y todo el equipo
+integra su trabajo ahí de forma frecuente.
+
+### Cómo funciona
+
+- **`main` siempre desplegable**: cada commit en `main` debe poder ir a
+  producción. Por eso el job `ci` corre en cada `push` y `pull_request`: si el
+  lint o las pruebas fallan, el cambio no entra.
+- **Ramas de feature muy cortas**: se crean ramas pequeñas a partir de `main`,
+  viven horas o pocos días y se fusionan rápido mediante un Pull Request. No hay
+  ramas `develop`, `release` ni `hotfix` de larga vida (eso es Git Flow, el
+  enfoque opuesto).
+- **Integración continua de verdad**: al fusionar seguido y en porciones
+  chicas, los conflictos son mínimos y el feedback es inmediato.
+- **Releases por tags, no por ramas**: la promoción a QA y producción se hace
+  etiquetando un commit de `main`, no creando ramas de release. Un tag `-rc`
+  (ej. `v1.2.0-rc1`) dispara la imagen de **QA** y un tag limpio (ej. `v1.2.0`)
+  la de **producción**. El historial lineal de `main` es la única fuente de
+  verdad.
+
+### Flujo típico
+
+```mermaid
+flowchart LR
+    feat["rama feature<br/>(corta)"] -->|"Pull Request + CI"| main["main (trunk)<br/>siempre verde"]
+    main -->|"tag v1.2.0-rc1"| qa["imagen QA"]
+    main -->|"tag v1.2.0"| prod["imagen Prod + latest"]
+```
+
+### Por qué este modelo y no Git Flow
+
+| Tema                | Trunk-Based (este repo)          | Git Flow |
+|---------------------|----------------------------------|----------|
+| Ramas largas        | Solo `main`                      | `main`, `develop`, `release/*`, `hotfix/*` |
+| Vida de una feature | Horas / días                     | Días / semanas |
+| Releases            | Por tags sobre `main`            | Por ramas `release/*` |
+| Conflictos de merge | Pocos (integración frecuente)    | Más frecuentes y grandes |
+| Encaje con CI/CD    | Natural                          | Requiere más coordinación |
+
+> Buenas prácticas que acompañan a trunk-based: PRs pequeños, revisión rápida,
+> protección de rama en `main` (exigir que el job `ci` pase antes de fusionar) y
+> uso de _feature flags_ para esconder trabajo incompleto en lugar de mantenerlo
+> en ramas aparte.
+
 ## Ejecutar en local
 
 ```bash
