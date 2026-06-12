@@ -76,10 +76,3 @@ curl -X POST http://localhost:5000/calculate \
   -H "Content-Type: application/json" \
   -d '{"op": "sumar", "a": 2, "b": 3}'
 ```
-
-## Ideas para practicar
-
-1. Abre un PR con una prueba que falle y observa cómo el job `ci` bloquea el merge.
-2. Agrega una operación `potencia` (con pruebas) y haz que CI pase.
-3. Publica un tag `v0.1.0-rc1` y verifica que se construye la imagen de **QA**.
-4. Publica `v0.1.0` y verifica que se construye la imagen de **producción** con `latest`.
