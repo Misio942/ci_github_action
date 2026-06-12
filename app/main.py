@@ -1,4 +1,3 @@
-"""API mínima en Flask que expone la calculadora, para practicar CI/CD."""
 from flask import Flask, jsonify, request
 
 from app.calculator import dividir, multiplicar, restar, sumar

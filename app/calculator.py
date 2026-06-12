@@ -1,4 +1,4 @@
-"""Módulo de calculadora pequeña para practicar CI/CD."""
+"""Módulo de calculadora para mostrar trunk base."""
 
 
 def sumar(a: float, b: float) -> float:
