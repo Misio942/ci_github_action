@@ -1,40 +1,40 @@
-"""Minimal Flask API exposing the calculator, used to practice CI/CD."""
+"""API mínima en Flask que expone la calculadora, para practicar CI/CD."""
 from flask import Flask, jsonify, request
 
-from app.calculator import add, divide, multiply, subtract
+from app.calculator import dividir, multiplicar, restar, sumar
 
 app = Flask(__name__)
 
 OPERATIONS = {
-    "add": add,
-    "subtract": subtract,
-    "multiply": multiply,
-    "divide": divide,
+    "sumar": sumar,
+    "restar": restar,
+    "multiplicar": multiplicar,
+    "dividir": dividir,
 }
 
 
 @app.get("/health")
 def health():
-    """Liveness probe."""
+    """(liveness probe)."""
     return jsonify(status="ok"), 200
 
 
 @app.post("/calculate")
 def calculate():
-    """Run an operation on two numbers.
+    """Ejecuta una operación sobre dos números.
 
-    Expects JSON: {"op": "add", "a": 1, "b": 2}
+    Espera JSON: {"op": "sumar", "a": 1, "b": 2}
     """
     data = request.get_json(silent=True) or {}
     op = data.get("op")
     if op not in OPERATIONS:
-        return jsonify(error=f"unknown op '{op}'"), 400
+        return jsonify(error=f"operación desconocida '{op}'"), 400
 
     try:
         a = float(data["a"])
         b = float(data["b"])
     except (KeyError, TypeError, ValueError):
-        return jsonify(error="'a' and 'b' must be numbers"), 400
+        return jsonify(error="'a' y 'b' deben ser números"), 400
 
     try:
         result = OPERATIONS[op](a, b)

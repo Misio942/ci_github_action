@@ -1,20 +1,24 @@
 name: CD
 
-# Crea y publica una imagen Docker en el Registro de Contenedores de GitHub (GHCR). 
-# Cada vez que se agrega código al repositorio principal o se añade una etiqueta de versión.
-
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]  # ← nombre exacto del workflow de arriba
+    types: [completed]
     branches: [main]
-    tags: ["v*"]
+  push:
+    tags: ["v*"]  # ← tags no pasan por workflow_run, se triggerean directo
 
-# Fuerza a las actions JavaScript a usar Node.js 24 (Node 20 está deprecado).
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # Si vino de workflow_run, solo continúa si CI pasó.
+    # Si vino de un tag, no hay workflow_run event, así que la condición lo permite.
+    if: >
+      github.event_name == 'push' ||
+      github.event.workflow_run.conclusion == 'success'
     permissions:
       contents: read
       packages: write

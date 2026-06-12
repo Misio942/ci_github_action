@@ -1,27 +1,27 @@
-"""Small calculator module to practice CI/CD."""
+"""Módulo de calculadora pequeña para practicar CI/CD."""
 
 
-def add(a: float, b: float) -> float:
-    """Return the sum of two numbers."""
+def sumar(a: float, b: float) -> float:
+    """Devuelve la suma de dos números."""
     return a + b
 
 
-def subtract(a: float, b: float) -> float:
-    """Return the difference of two numbers."""
+def restar(a: float, b: float) -> float:
+    """Devuelve la resta de dos números."""
     return a - b
 
 
-def multiply(a: float, b: float) -> float:
-    """Return the product of two numbers."""
+def multiplicar(a: float, b: float) -> float:
+    """Devuelve el producto de dos números."""
     return a * b
 
 
-def divide(a: float, b: float) -> float:
-    """Return the quotient of two numbers.
+def dividir(a: float, b: float) -> float:
+    """Devuelve el cociente de dos números.
 
-    Raises:
-        ZeroDivisionError: if b is 0.
+    Lanza:
+        ZeroDivisionError: si b es 0.
     """
     if b == 0:
-        raise ZeroDivisionError("Cannot divide by zero")
+        raise ZeroDivisionError("No se puede dividir entre cero")
     return a / b

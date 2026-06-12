@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-# Fuerza a las actions JavaScript a usar Node.js 24 (Node 20 está deprecado).
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -15,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.14"]
+        python-version: ["3.14"]  # ← 3.14 no existe estable
 
     steps:
       - name: Checkout code

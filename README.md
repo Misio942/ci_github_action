@@ -11,7 +11,7 @@ unitarias y de integración, linting y dos pipelines: **CI** (lint + pruebas) y
 ```
 .
 ├── app/
-│   ├── calculator.py     # add / subtract / multiply / divide
+│   ├── calculator.py     # sumar / restar / multiplicar / dividir
 │   └── main.py           # API Flask (/health, /calculate)
 ├── tests/
 │   ├── test_calculator.py
@@ -47,7 +47,7 @@ curl http://localhost:5000/health
 
 curl -X POST http://localhost:5000/calculate \
   -H "Content-Type: application/json" \
-  -d '{"op": "add", "a": 2, "b": 3}'
+  -d '{"op": "sumar", "a": 2, "b": 3}'
 ```
 
 ## Pipelines
