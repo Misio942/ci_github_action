@@ -1,29 +1,56 @@
 # ci_github_action
 
-Pequeña app en Python para practicar CI/CD con GitHub Actions.
+App en Python para CI/CD con GitHub Actions.
 
 Es una calculadora mínima expuesta a través de una API en Flask, con pruebas
-unitarias y de integración, linting y dos pipelines: **CI** (lint + pruebas) y
-**CD** (construir y publicar una imagen Docker).
+unitarias y de integración, linting y un pipeline único (`ci-cd.yml`) que separa
+las fases de **CI** (lint + pruebas) y **CD** (construir y publicar la imagen
+Docker en GHCR), con entornos distintos para QA y producción.
 
 ## Estructura del proyecto
 
 ```
 .
 ├── app/
-│   ├── calculator.py     # sumar / restar / multiplicar / dividir
-│   └── main.py           # API Flask (/health, /calculate)
+│   ├── calculator.py        # sumar / restar / multiplicar / dividir
+│   └── main.py              # API Flask (/health, /calculate)
 ├── tests/
 │   ├── test_calculator.py
 │   └── test_api.py
 ├── .github/workflows/
-│   ├── ci.yml            # se ejecuta en push y PR: flake8 + pytest (py 3.10–3.12)
-│   └── cd.yml            # se ejecuta en main y tags: build + push de imagen Docker
+│   └── ci-cd.yml            # pipeline único: jobs ci, cd-qa y cd-prod
 ├── Dockerfile
-├── requirements.txt
-├── requirements-dev.txt
+├── requirements.txt         # dependencias de runtime (producción)
+├── requirements-dev.txt     # runtime + test/lint (incluye al anterior con -r)
 └── pytest.ini
 ```
+
+## Arquitectura del pipeline
+
+El workflow `ci-cd.yml` se dispara con `push` a `main`, `pull_request` a `main`
+y tags `v*`. Está compuesto por tres jobs: uno de integración (`ci`) y dos de
+entrega (`cd-qa` y `cd-prod`) que dependen del primero y se seleccionan según el
+tipo de tag.
+
+### Jobs
+
+| Job       | Cuándo corre                                  | Qué hace |
+|-----------|-----------------------------------------------|----------|
+| `ci`      | Siempre (push, PR y tags)                     | Instala dependencias, corre `flake8` y `pytest` sobre una matriz de Python. Actúa como gate: si falla, no se construye nada. |
+| `cd-qa`   | Solo en tags `v*` que contienen `-rc`         | Construye la imagen y la publica en GHCR con el tag del release candidate más el tag móvil `qa`. **No** mueve `latest`. |
+| `cd-prod` | Solo en tags `v*` que **no** contienen `-rc`  | Construye la imagen y la publica en GHCR con el tag de versión y mueve `latest`. |
+
+### Decisiones de diseño
+
+- **`needs: ci`** en ambos jobs de CD: ninguna imagen se publica si las pruebas
+  o el lint fallan.
+- **Separación QA / Prod por convención de tags**: un tag `-rc` va a QA, un tag
+  limpio va a producción. Así se practica un flujo de promoción real
+  (`v1.2.0-rc1` → validar → `v1.2.0`).
+- **`latest` solo lo controla producción** (`flavor: latest=true` en `cd-prod`,
+  `latest=false` en `cd-qa`) para que `latest` nunca apunte a un candidato.
+- **Autenticación con `GITHUB_TOKEN`**: usa el token integrado y el permiso
+  `packages: write`, sin necesidad de secretos adicionales.
 
 ## Ejecutar en local
 
@@ -50,18 +77,9 @@ curl -X POST http://localhost:5000/calculate \
   -d '{"op": "sumar", "a": 2, "b": 3}'
 ```
 
-## Pipelines
-
-- **CI** (`.github/workflows/ci.yml`): se dispara en cada push y pull request a
-  `main`. Instala dependencias, ejecuta `flake8` y luego `pytest` en Python
-  3.10, 3.11 y 3.12.
-- **CD** (`.github/workflows/cd.yml`): se dispara en los push a `main` y en los
-  tags `v*`. Construye la imagen Docker y la publica en GHCR
-  (`ghcr.io/<owner>/<repo>`). Usa el `GITHUB_TOKEN` integrado, no necesita
-  secretos adicionales.
-
 ## Ideas para practicar
 
-1. Abre un PR con una prueba que falle y observa cómo CI bloquea el merge.
-2. Agrega una operación `power` (con pruebas) y haz que CI pase.
-3. Publica un tag como `v0.1.0` y revisa la imagen en la pestaña Packages.
+1. Abre un PR con una prueba que falle y observa cómo el job `ci` bloquea el merge.
+2. Agrega una operación `potencia` (con pruebas) y haz que CI pase.
+3. Publica un tag `v0.1.0-rc1` y verifica que se construye la imagen de **QA**.
+4. Publica `v0.1.0` y verifica que se construye la imagen de **producción** con `latest`.
