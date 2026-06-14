@@ -133,7 +133,7 @@ jobs:
   # Deploy simulado: hace pull de la imagen recién publicada, la levanta y
   # verifica /health.
   # ---------------------------------------------------------------------------
-  
+
   deploy-qa:
     name: Deploy (QA)
     needs: cd-qa
@@ -143,6 +143,9 @@ jobs:
       contents: read
       packages: read
     steps:
+      - name: Normalizar nombre de imagen (minúsculas)
+        run: echo "IMAGE_LC=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -150,10 +153,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull de la imagen QA
-        run: docker pull "${IMAGE}:qa"
+        run: docker pull "${IMAGE_LC}:qa"
 
       - name: Levantar contenedor
-        run: docker run -d --name app -p 5000:5000 "${IMAGE}:qa"
+        run: docker run -d --name app -p 5000:5000 "${IMAGE_LC}:qa"
 
       - name: Smoke test /health
         run: |
@@ -182,6 +185,9 @@ jobs:
       contents: read
       packages: read
     steps:
+      - name: Normalizar nombre de imagen (minúsculas)
+        run: echo "IMAGE_LC=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -189,10 +195,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull de la imagen Prod
-        run: docker pull "${IMAGE}:latest"
+        run: docker pull "${IMAGE_LC}:latest"
 
       - name: Levantar contenedor
-        run: docker run -d --name app -p 5000:5000 "${IMAGE}:latest"
+        run: docker run -d --name app -p 5000:5000 "${IMAGE_LC}:latest"
 
       - name: Smoke test /health
         run: |
