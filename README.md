@@ -19,7 +19,7 @@ Docker en GHCR), con entornos distintos para QA y producción.
 │   └── test_api.py
 ├── .github/
 │   ├── workflows/
-│   │   └── ci-cd.yml        # pipeline único: jobs ci, ci-gate, cd-qa y cd-prod
+│   │   └── ci-cd.yml        # pipeline: ci, ci-gate, cd-qa/prod, deploy-qa/prod
 │   ├── rulesets/
 │   │   └── main-protection.json  # ruleset importable para proteger main
 │   └── dependabot.yml
@@ -32,18 +32,23 @@ Docker en GHCR), con entornos distintos para QA y producción.
 ## Arquitectura del pipeline
 
 El workflow `ci-cd.yml` se dispara con `push` a `main`, `pull_request` a `main`
-y tags `v*`. Está compuesto por cuatro jobs: integración (`ci`), un gate
-estable (`ci-gate`) y dos de entrega (`cd-qa` y `cd-prod`) que dependen de la
-integración y se seleccionan según el tipo de tag.
+y tags `v*`. Está compuesto por seis jobs: integración (`ci`), un gate estable
+(`ci-gate`), dos de build/push (`cd-qa` y `cd-prod`) y dos de deploy
+(`deploy-qa` y `deploy-prod`), encadenados según el tipo de tag.
 
 ### Jobs
 
-| Job       | Cuándo corre                                  | Qué hace |
-|-----------|-----------------------------------------------|----------|
-| `ci`      | Siempre (push, PR y tags)                     | Instala dependencias, corre `flake8` y `pytest` sobre una matriz de Python. Actúa como gate: si falla, no se construye nada. |
-| `ci-gate` | Siempre (`needs: ci`)                         | Job con **nombre estable** que resume el resultado de la matriz. Es el _required status check_ del ruleset de `main`, así no se rompe al cambiar la versión de Python. |
-| `cd-qa`   | Solo en tags `v*` que contienen `-rc`         | Construye la imagen y la publica en GHCR con el tag del release candidate más el tag móvil `qa`. **No** mueve `latest`. Corre en el environment `qa`. |
-| `cd-prod` | Solo en tags `v*` que **no** contienen `-rc`  | Construye la imagen y la publica en GHCR con el tag de versión y mueve `latest`. Corre en el environment `production` (apto para exigir aprobación manual). |
+| Job          | Cuándo corre                                  | Qué hace |
+|--------------|-----------------------------------------------|----------|
+| `ci`         | Siempre (push, PR y tags)                     | Instala dependencias, corre `flake8` y `pytest` sobre una matriz de Python. Actúa como gate: si falla, no se construye nada. |
+| `ci-gate`    | Siempre (`needs: ci`)                         | Job con **nombre estable** que resume el resultado de la matriz. Es el _required status check_ del ruleset de `main`, así no se rompe al cambiar la versión de Python. |
+| `cd-qa`      | Solo en tags `v*` que contienen `-rc`         | Construye la imagen y la publica en GHCR con el tag del release candidate más el tag móvil `qa`. **No** mueve `latest`. Environment `qa`. |
+| `cd-prod`    | Solo en tags `v*` que **no** contienen `-rc`  | Construye la imagen y la publica en GHCR con el tag de versión y mueve `latest`. Environment `production`. |
+| `deploy-qa`  | `needs: cd-qa`                                | **Deploy simulado**: hace `pull` de `:qa`, levanta el contenedor y verifica `/health` (smoke test). Environment `qa`. |
+| `deploy-prod`| `needs: cd-prod`                              | **Deploy simulado**: hace `pull` de `:latest`, levanta el contenedor y verifica `/health`. Environment `production`. |
+
+> Los jobs `deploy-*` no usan infraestructura externa: corren la imagen dentro
+> del propio runner para validar que el artefacto es desplegable.
 
 ### Decisiones de diseño
 

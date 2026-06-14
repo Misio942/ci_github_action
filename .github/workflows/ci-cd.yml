@@ -128,3 +128,86 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  # ---------------------------------------------------------------------------
+  # Deploy simulado: hace pull de la imagen recién publicada, la levanta y
+  # verifica /health.
+  # ---------------------------------------------------------------------------
+  
+  deploy-qa:
+    name: Deploy (QA)
+    needs: cd-qa
+    runs-on: ubuntu-latest
+    environment: qa
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull de la imagen QA
+        run: docker pull "${IMAGE}:qa"
+
+      - name: Levantar contenedor
+        run: docker run -d --name app -p 5000:5000 "${IMAGE}:qa"
+
+      - name: Smoke test /health
+        run: |
+          for i in $(seq 1 15); do
+            if curl -fsS http://localhost:5000/health | grep -q '"status":"ok"'; then
+              echo "Servicio QA saludable"
+              exit 0
+            fi
+            echo "Esperando al servicio... ($i)"
+            sleep 2
+          done
+          echo "El servicio no respondió saludable a tiempo"
+          docker logs app
+          exit 1
+
+      - name: Limpiar contenedor
+        if: always()
+        run: docker rm -f app || true
+
+  deploy-prod:
+    name: Deploy (Prod)
+    needs: cd-prod
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull de la imagen Prod
+        run: docker pull "${IMAGE}:latest"
+
+      - name: Levantar contenedor
+        run: docker run -d --name app -p 5000:5000 "${IMAGE}:latest"
+
+      - name: Smoke test /health
+        run: |
+          for i in $(seq 1 15); do
+            if curl -fsS http://localhost:5000/health | grep -q '"status":"ok"'; then
+              echo "Servicio Prod saludable"
+              exit 0
+            fi
+            echo "Esperando al servicio... ($i)"
+            sleep 2
+          done
+          echo "El servicio no respondió saludable a tiempo"
+          docker logs app
+          exit 1
+
+      - name: Limpiar contenedor
+        if: always()
+        run: docker rm -f app || true
